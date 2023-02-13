@@ -1,57 +1,38 @@
-# Project Name
+Testing software deployed to cloud services like Azure can incure significant
+costs from provisioning and maintaining the services needed for testing.
 
-(short, 1-3 sentenced, description of the project)
+Here at Microsoft, we've developed a lightweight test proxy that
+allows us to record app interactions with Azure and play them back on
+demand, reducing our testing costs significantly. we're now excited to
+share this tool with the broader Azure development community and invite
+you to try it out for yourself. 
 
-## Features
+This repository contains a sample project that demonstrates integration
+of the record and playback test proxy with an app that interacts with 
+the Azure Cosmos DB Table Storage service.
 
-This project framework provides the following features:
+You must have the test proxy installed and running before starting the test.
 
-* Feature 1
-* Feature 2
-* ...
+To install the proxy:
 
-## Getting Started
+[Install .NET 5.0 or higher](https://dotnet.microsoft.com/download)
 
-### Prerequisites
+Install the test-proxy:
 
-(ideally very short, if any)
+```
+dotnet tool update azure.sdk.tools.testproxy \--global \--add-source https://pkgs.dev.azure.com/azure-sdk/public/\_packaging/azure-sdk-for-net/nuget/v3/index.json \--version \"1.0.0-dev\*\"
+```
+After installing the tool, run it in a terminal or cmd window by typing the command 'test-proxy'. 
+The included recording file is provided for illustration purposes only,
+it can't be used to play back the test since the resources associated
+with it no longer exist in Azure. 
 
-- OS
-- Library version
-- ...
+This project is intended to be a demo that goes with the following Azure
+SDK blog post:
+<blog post link TBD>
 
-### Installation
-
-(ideally very short)
-
-- npm install [package name]
-- mvn install
-- ...
-
-### Quickstart
-(Add steps to get up and running quickly)
-
-1. git clone [repository clone url]
-2. cd [repository name]
-3. ...
-
-
-## Demo
-
-A demo app is included to show how to use the project.
-
-To run the demo, follow these steps:
-
-(Add steps to start up the demo)
-
-1.
-2.
-3.
-
-## Resources
-
-(Any additional resources or related projects)
-
-- Link to supporting information
-- Link to similar sample
-- ...
+The test proxy is compatible with all four major languages and can be
+easily installed using the standard dotnet tool installation process as
+described in the blog post. To use it, you\'ll need to be able to reroute
+your app requests to the test proxy via modifications to the request
+headers.
