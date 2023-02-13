@@ -20,18 +20,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 )
 
-type testProxyMode struct {
-	RecordMode   string
-	PlaybackMode string
-	LiveMode     string
-}
-
-var TestProxyMode = testProxyMode{
-	RecordMode:   "record",
-	PlaybackMode: "playback",
-	LiveMode:     "live",
-}
-
 type testProxyHeader struct {
 	RecordingIdHeader          string
 	RecordingModeHeader        string
@@ -44,12 +32,18 @@ var TestProxyHeader = testProxyHeader{
 	RecordingUpstreamURIHeader: "x-recording-upstream-base-uri",
 }
 
+// Maintain an http client for POST-ing to the test proxy to start and stop recording.
+// For your test client, you can either maintain the lack of certificate validation (the test-proxy
+// is making real HTTPS calls, so if your actual api call is having cert issues, those will still surface.
 var client = http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	},
 }
 
+// TestProxy encapsulates variables that store values
+// related to the test proxy, such as connection host (localhost),
+// connection port (5001), and mode (record/playback).
 type TestProxy struct {
 	Host          string
 	Port          int
@@ -118,7 +112,9 @@ func getRecordingFilePath(recordingPath string, t *testing.T) string {
 	return path.Join(recordingPath, "recordings", t.Name()+".json")
 }
 
-// StartTestProxy tells the test proxy to begin accepting requests for a given test
+// StartTextProxy() will initiate a record or playback session by POST-ing a request
+// to a running instance of the test proxy. The test proxy will return a recording ID
+// value in the response header, which we pull out and save as 'x-recording-id'.
 func StartTestProxy(t *testing.T, tpv *TestProxy) error {
 	if tpv == nil {
 		return fmt.Errorf("TestProxy not empty")
@@ -173,7 +169,12 @@ func StartTestProxy(t *testing.T, tpv *TestProxy) error {
 	return nil
 }
 
-// StopTestProxy tells the test proxy to stop accepting requests for a given test
+// StopTextProxy() instructs the test proxy to stop recording or stop playback,
+// depending on the mode it is running in. The instruction to stop is made by
+// POST-ing a request to a running instance of the test proxy. We pass in the recording
+// ID and a directive to save the recording (when recording is running).
+//
+// **Note that if you skip this step your recording WILL NOT be saved.**
 func StopTestProxy(t *testing.T, tpv *TestProxy) error {
 	if tpv == nil {
 		return fmt.Errorf("TestProxy not empty")

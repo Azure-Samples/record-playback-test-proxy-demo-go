@@ -17,6 +17,14 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
+type Product struct {
+	RowKey       string
+	PartitionKey string
+	Name         string
+	Quantity     int
+	Sale         bool
+}
+
 func TestCosmosDBTables(t *testing.T) {
 	//=====================================================================//
 	// Test proxy prologue. The following code is necessary to configure   //
@@ -154,12 +162,4 @@ func TestCosmosDBTables(t *testing.T) {
 		t.Fatal(err)
 	}
 
-}
-
-type Product struct {
-	RowKey       string
-	PartitionKey string
-	Name         string
-	Quantity     int
-	Sale         bool
 }
