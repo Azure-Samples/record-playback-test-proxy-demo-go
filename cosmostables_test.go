@@ -42,30 +42,30 @@ func TestCosmosDBTables(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	tpv := &TestProxy{}
+	tp := NewTestProxy()
 	if userproxy == true {
-		tpv.Mode = os.Getenv("PROXY_MODE")
-		tpv.Host = os.Getenv("PROXY_HOST")
+		tp.Mode = os.Getenv("PROXY_MODE")
+		tp.Host = os.Getenv("PROXY_HOST")
 		port, err := strconv.Atoi(os.Getenv("PROXY_PORT"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		tpv.Port = port
-		tpv.RecordingPath = root
+		tp.Port = port
+		tp.RecordingPath = root
 
-		if err = StartTestProxy(t, tpv); err != nil {
+		if err = StartTestProxy(t, tp); err != nil {
 			t.Fatal(err)
 		}
 
 		defer func() {
-			err = StopTestProxy(t, tpv)
+			err = StopTestProxy(t, tp)
 			if err != nil {
 				t.Fatal(err)
 			}
 		}()
 	}
 
-	options, err := GetClientOption(tpv, &client)
+	options, err := GetClientOption(tp)
 	if err != nil {
 		log.Fatal(err)
 	}
