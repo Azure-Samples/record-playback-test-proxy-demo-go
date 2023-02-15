@@ -42,30 +42,30 @@ func TestCosmosDBTables(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	tp := NewTestProxy()
+	tpv := NewTestProxy()
 	if userproxy == true {
-		tp.Mode = os.Getenv("PROXY_MODE")
-		tp.Host = os.Getenv("PROXY_HOST")
+		tpv.Mode = os.Getenv("PROXY_MODE")
+		tpv.Host = os.Getenv("PROXY_HOST")
 		port, err := strconv.Atoi(os.Getenv("PROXY_PORT"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		tp.Port = port
-		tp.RecordingPath = root
+		tpv.Port = port
+		tpv.RecordingPath = root
 
-		if err = StartTestProxy(t, tp); err != nil {
+		if err = StartTestProxy(t, tpv); err != nil {
 			t.Fatal(err)
 		}
 
 		defer func() {
-			err = StopTestProxy(t, tp)
+			err = StopTestProxy(t, tpv)
 			if err != nil {
 				t.Fatal(err)
 			}
 		}()
 	}
 
-	options, err := GetClientOption(tp)
+	options, err := GetClientOption(tpv)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestCosmosDBTables(t *testing.T) {
 	}
 
 	// New instance of TableClient class referencing the server-side table
-	tableClient := tableServiceClient.NewClient("gocosmosZ")
+	tableClient := tableServiceClient.NewClient("gocosmosZ1")
 	_, err = tableClient.CreateTable(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)

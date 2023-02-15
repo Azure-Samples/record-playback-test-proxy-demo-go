@@ -44,7 +44,7 @@ var client = http.Client{
 // TestProxy encapsulates variables that store values
 // related to the test proxy, such as connection host (localhost),
 // connection port (5001), and mode (record/playback).
-type TestProxy struct {
+type TestProxyVariable struct {
 	Client        *http.Client
 	Host          string
 	Port          int
@@ -53,40 +53,40 @@ type TestProxy struct {
 	RecordingPath string
 }
 
-func NewTestProxy() *TestProxy {
-	return &TestProxy{
+func NewTestProxy() *TestProxyVariable {
+	return &TestProxyVariable{
 		Client: &client,
 	}
 }
 
-func (tp TestProxy) host() string {
-	return fmt.Sprintf("%s:%d", tp.Host, tp.Port)
+func (tpv TestProxyVariable) host() string {
+	return fmt.Sprintf("%s:%d", tpv.Host, tpv.Port)
 }
 
-func (tp TestProxy) scheme() string {
-	if tp.Port == 5001 {
+func (tpv TestProxyVariable) scheme() string {
+	if tpv.Port == 5001 {
 		return "https"
 	}
 	return "http"
 }
 
-func (tp TestProxy) baseURL() string {
-	return fmt.Sprintf("%s://%s:%d", tp.scheme(), tp.Host, tp.Port)
+func (tpv TestProxyVariable) baseURL() string {
+	return fmt.Sprintf("%s://%s:%d", tpv.scheme(), tpv.Host, tpv.Port)
 }
 
-func (tp *TestProxy) Do(req *http.Request) (resp *http.Response, err error) {
+func (tpv *TestProxyVariable) Do(req *http.Request) (resp *http.Response, err error) {
 	oriSchema := req.URL.Scheme
 	oriHost := req.URL.Host
-	req.URL.Scheme = tp.scheme()
-	req.URL.Host = tp.host()
-	req.Host = tp.host()
+	req.URL.Scheme = tpv.scheme()
+	req.URL.Host = tpv.host()
+	req.Host = tpv.host()
 
 	// replace request target to use test proxy
 	req.Header.Set(TestProxyHeader.RecordingUpstreamURIHeader, fmt.Sprintf("%v://%v", oriSchema, oriHost))
-	req.Header.Set(TestProxyHeader.RecordingModeHeader, tp.Mode)
-	req.Header.Set(TestProxyHeader.RecordingIdHeader, tp.RecordingId)
+	req.Header.Set(TestProxyHeader.RecordingModeHeader, tpv.Mode)
+	req.Header.Set(TestProxyHeader.RecordingIdHeader, tpv.RecordingId)
 
-	resp, err = tp.Client.Do(req)
+	resp, err = tpv.Client.Do(req)
 
 	// for any lro operation, need to change back to the original target to prevent
 	if resp != nil {
@@ -97,10 +97,10 @@ func (tp *TestProxy) Do(req *http.Request) (resp *http.Response, err error) {
 	return resp, err
 }
 
-func GetClientOption(tp *TestProxy) (*arm.ClientOptions, error) {
+func GetClientOption(tpv *TestProxyVariable) (*arm.ClientOptions, error) {
 	options := &arm.ClientOptions{
 		ClientOptions: policy.ClientOptions{
-			Transport: tp,
+			Transport: tpv,
 		},
 	}
 
@@ -122,13 +122,13 @@ func getRecordingFilePath(recordingPath string, t *testing.T) string {
 // StartTextProxy() will initiate a record or playback session by POST-ing a request
 // to a running instance of the test proxy. The test proxy will return a recording ID
 // value in the response header, which we pull out and save as 'x-recording-id'.
-func StartTestProxy(t *testing.T, tp *TestProxy) error {
-	if tp == nil {
+func StartTestProxy(t *testing.T, tpv *TestProxyVariable) error {
+	if tpv == nil {
 		return fmt.Errorf("TestProxy not empty")
 	}
 
-	recordingFilePath := getRecordingFilePath(tp.RecordingPath, t)
-	url := fmt.Sprintf("%s/%s/start", tp.baseURL(), tp.Mode)
+	recordingFilePath := getRecordingFilePath(tpv.RecordingPath, t)
+	url := fmt.Sprintf("%s/%s/start", tpv.baseURL(), tpv.Mode)
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -157,7 +157,7 @@ func StartTestProxy(t *testing.T, tp *TestProxy) error {
 		return fmt.Errorf("recording ID was not returned by the response. Response body: %s", b)
 	}
 
-	tp.RecordingId = recId
+	tpv.RecordingId = recId
 
 	// Unmarshal any variables returned by the proxy
 	var m map[string]interface{}
@@ -182,18 +182,18 @@ func StartTestProxy(t *testing.T, tp *TestProxy) error {
 // ID and a directive to save the recording (when recording is running).
 //
 // **Note that if you skip this step your recording WILL NOT be saved.**
-func StopTestProxy(t *testing.T, tp *TestProxy) error {
-	if tp == nil {
+func StopTestProxy(t *testing.T, tpv *TestProxyVariable) error {
+	if tpv == nil {
 		return fmt.Errorf("TestProxy not empty")
 	}
 
-	url := fmt.Sprintf("%v/%v/stop", tp.baseURL(), tp.Mode)
+	url := fmt.Sprintf("%v/%v/stop", tpv.baseURL(), tpv.Mode)
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set(TestProxyHeader.RecordingIdHeader, tp.RecordingId)
+	req.Header.Set(TestProxyHeader.RecordingIdHeader, tpv.RecordingId)
 
 	resp, err := client.Do(req)
 	if resp.StatusCode != 200 {
