@@ -44,7 +44,8 @@ var client = http.Client{
 // TestProxy encapsulates variables that store values
 // related to the test proxy, such as connection host (localhost),
 // connection port (5001), and mode (record/playback).
-type TestProxy struct {
+type TestProxyVariable struct {
+	Client        *http.Client
 	Host          string
 	Port          int
 	Mode          string
@@ -52,48 +53,54 @@ type TestProxy struct {
 	RecordingPath string
 }
 
-func (tpv TestProxy) host() string {
+func NewTestProxyVariable() *TestProxyVariable {
+	return &TestProxyVariable{
+		Client: &client,
+	}
+}
+
+func (tpv TestProxyVariable) host() string {
 	return fmt.Sprintf("%s:%d", tpv.Host, tpv.Port)
 }
 
-func (tpv TestProxy) scheme() string {
-	return "https"
+func (tpv TestProxyVariable) scheme() string {
+	if tpv.Port == 5001 {
+		return "https"
+	}
+	return "http"
 }
 
-func (tpv TestProxy) baseURL() string {
-	return fmt.Sprintf("https://%s:%d", tpv.Host, tpv.Port)
+func (tpv TestProxyVariable) baseURL() string {
+	return fmt.Sprintf("%s://%s:%d", tpv.scheme(), tpv.Host, tpv.Port)
 }
 
-// Do with recording mode.
-// When handling live request, the policy will do nothing.
-// Otherwise, the policy will replace the URL of the request with the test proxy endpoint.
-// After request, the policy will change back to the original URL for the request to prevent wrong polling URL for LRO.
-func (tpv *TestProxy) Do(req *policy.Request) (resp *http.Response, err error) {
-	oriSchema := req.Raw().URL.Scheme
-	oriHost := req.Raw().URL.Host
-	req.Raw().URL.Scheme = tpv.scheme()
-	req.Raw().URL.Host = tpv.host()
-	req.Raw().Host = tpv.host()
+func (tpv *TestProxyVariable) Do(req *http.Request) (resp *http.Response, err error) {
+	oriSchema := req.URL.Scheme
+	oriHost := req.URL.Host
+	req.URL.Scheme = tpv.scheme()
+	req.URL.Host = tpv.host()
+	req.Host = tpv.host()
 
 	// replace request target to use test proxy
-	req.Raw().Header.Set(TestProxyHeader.RecordingUpstreamURIHeader, fmt.Sprintf("%v://%v", oriSchema, oriHost))
-	req.Raw().Header.Set(TestProxyHeader.RecordingModeHeader, tpv.Mode)
-	req.Raw().Header.Set(TestProxyHeader.RecordingIdHeader, tpv.RecordingId)
+	req.Header.Set(TestProxyHeader.RecordingUpstreamURIHeader, fmt.Sprintf("%v://%v", oriSchema, oriHost))
+	req.Header.Set(TestProxyHeader.RecordingModeHeader, tpv.Mode)
+	req.Header.Set(TestProxyHeader.RecordingIdHeader, tpv.RecordingId)
 
-	resp, err = req.Next()
+	resp, err = tpv.Client.Do(req)
+
 	// for any lro operation, need to change back to the original target to prevent
 	if resp != nil {
 		resp.Request.URL.Scheme = oriSchema
 		resp.Request.URL.Host = oriHost
 	}
+
 	return resp, err
 }
 
-func GetClientOption(tpv *TestProxy, client *http.Client) (*arm.ClientOptions, error) {
+func GetClientOption(tpv *TestProxyVariable) (*arm.ClientOptions, error) {
 	options := &arm.ClientOptions{
 		ClientOptions: policy.ClientOptions{
-			PerCallPolicies: []policy.Policy{tpv},
-			Transport:       client,
+			Transport: tpv,
 		},
 	}
 
@@ -115,7 +122,7 @@ func getRecordingFilePath(recordingPath string, t *testing.T) string {
 // StartTextProxy() will initiate a record or playback session by POST-ing a request
 // to a running instance of the test proxy. The test proxy will return a recording ID
 // value in the response header, which we pull out and save as 'x-recording-id'.
-func StartTestProxy(t *testing.T, tpv *TestProxy) error {
+func StartTestProxy(t *testing.T, tpv *TestProxyVariable) error {
 	if tpv == nil {
 		return fmt.Errorf("TestProxy not empty")
 	}
@@ -175,7 +182,7 @@ func StartTestProxy(t *testing.T, tpv *TestProxy) error {
 // ID and a directive to save the recording (when recording is running).
 //
 // **Note that if you skip this step your recording WILL NOT be saved.**
-func StopTestProxy(t *testing.T, tpv *TestProxy) error {
+func StopTestProxy(t *testing.T, tpv *TestProxyVariable) error {
 	if tpv == nil {
 		return fmt.Errorf("TestProxy not empty")
 	}
