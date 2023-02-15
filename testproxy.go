@@ -53,7 +53,7 @@ type TestProxyVariable struct {
 	RecordingPath string
 }
 
-func NewTestProxy() *TestProxyVariable {
+func NewTestProxyVariable() *TestProxyVariable {
 	return &TestProxyVariable{
 		Client: &client,
 	}
