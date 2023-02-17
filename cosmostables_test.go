@@ -37,46 +37,39 @@ func TestCosmosDBTables(t *testing.T) {
 		log.Fatal(err)
 	}
 
+	tpv := NewTestProxyVariables(t)
 	userproxy, err := strconv.ParseBool(os.Getenv("USE_PROXY"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	tableOptions := &aztables.ClientOptions{}
 
-	tpv := NewTestProxyVariable()
 	if userproxy == true {
-		tpv.Mode = os.Getenv("PROXY_MODE")
 		tpv.Host = os.Getenv("PROXY_HOST")
 		port, err := strconv.Atoi(os.Getenv("PROXY_PORT"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		tpv.Port = port
-		tpv.RecordingPath = root
-
-		if err = StartTestProxy(t, tpv); err != nil {
+		tpv.Mode = os.Getenv("PROXY_MODE")
+		if err = StartTestProxy(tpv); err != nil {
 			t.Fatal(err)
 		}
+		tableOptions.Transport = NewTestProxyTransport(tpv.HttpClient, tpv.Host, tpv.Port, tpv.RecordingId, tpv.Mode)
 
 		defer func() {
-			err = StopTestProxy(t, tpv)
+			err = StopTestProxy(tpv)
 			if err != nil {
 				t.Fatal(err)
 			}
 		}()
 	}
 
-	options, err := GetClientOption(tpv)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	//=========================================================================================//
 	// End of test proxy prologue. Original test code starts here. Everything after this point //
 	// represents an app interacting with the Azure Table Storage service.                     //
 	//=========================================================================================//
-	tableServiceClient, err := aztables.NewServiceClientFromConnectionString(os.Getenv("COSMOS_CONNECTION_STRING"), &aztables.ClientOptions{
-		ClientOptions: options.ClientOptions,
-	})
+	tableServiceClient, err := aztables.NewServiceClientFromConnectionString(os.Getenv("COSMOS_CONNECTION_STRING"), tableOptions)
 	if err != nil {
 		t.Fatal(err)
 	}
