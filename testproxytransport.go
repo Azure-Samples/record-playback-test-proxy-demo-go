@@ -34,9 +34,10 @@ var client = http.Client{
 
 // Derived from policy.Transporter, TestProxyTransport provides custom
 // implementations of the abstract methods defined in the base class
-// described above in the HTTP Transport section of this article. These
-// custom implementations allow us to intercept and reroute app traffic sent
-// between an app and Azure to the test proxy.
+// described in the HTTP Transport section of the following blog post:
+// https://aka.ms/azsdk/test-proxy
+// These custom implementations allow us to intercept and reroute app
+// traffic sent between an app and Azure to the test proxy.
 type TestProxyTransport struct {
 	transport   policy.Transporter
 	host        string
